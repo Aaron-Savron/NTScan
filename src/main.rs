@@ -2788,9 +2788,8 @@ fn run_scan(args: &Args, show_progress: bool) -> (Vec<Finding>, usize, std::time
             let result = if let Some(mut scanner) = MultiLanguageScanner::new(path) {
                 scanner.scan_file(path)
             } else {
-                // Fallback to C/C++ scanner for unknown extensions
-                let mut scanner = Scanner::new();
-                scanner.scan_file(path)
+                // Skip unknown file extensions
+                Vec::new()
             };
             
             if let Some(ref pb) = progress {
