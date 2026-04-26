@@ -15,8 +15,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Install Rust
-        uses: dtolnay/rust-action@stable
+      - name: Setup Rust
+        run: |
+          rustup update stable
+          rustup default stable
       
       - name: Build
         run: cargo build --release
@@ -35,8 +37,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Install Rust
-        uses: dtolnay/rust-action@stable
+      - name: Setup Rust
+        run: |
+          rustup update stable
+          rustup default stable
       
       - name: Build
         run: cargo build --release
@@ -55,8 +59,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Install Rust
-        uses: dtolnay/rust-action@stable
+      - name: Setup Rust
+        run: |
+          rustup update stable
+          rustup default stable
       
       - name: Build
         run: cargo build --release
@@ -75,10 +81,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Install Rust
-        uses: dtolnay/rust-action@stable
-        with:
-          targets: aarch64-apple-darwin
+      - name: Setup Rust
+        run: |
+          rustup update stable
+          rustup target add aarch64-apple-darwin
       
       - name: Build ARM64
         run: cargo build --release --target aarch64-apple-darwin
