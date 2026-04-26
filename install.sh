@@ -54,7 +54,11 @@ main() {
     echo "Getting latest version..."
     VERSION=$(get_latest_version)
     if [ -z "$VERSION" ]; then
-        echo "  No release found, will build from source..."
+        echo ""
+        echo "  No release found yet."
+        echo "  The release workflow may still be building binaries."
+        echo "  Will build from source instead (this takes 2-5 minutes)..."
+        echo ""
         install_from_source
         return
     fi
