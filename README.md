@@ -93,11 +93,48 @@ See [DEEP_BUGS.md](DEEP_BUGS.md) for the 29 vulnerability types.
 
 ## Install
 
+### Linux / macOS
+
 ```bash
-# With Rust
+# Download latest release
+curl -L https://github.com/Aaron-Savron/ntscan/releases/latest/download/ntscan-linux-amd64 -o ntscan
+chmod +x ntscan
+sudo mv ntscan /usr/local/bin/
+
+# Or use the install script
+curl -fsSL https://raw.githubusercontent.com/Aaron-Savron/ntscan/main/install.sh | bash
+```
+
+### Windows
+
+```powershell
+# PowerShell (Run as Administrator)
+Invoke-WebRequest -Uri "https://github.com/Aaron-Savron/ntscan/releases/latest/download/ntscan-windows-amd64.exe" -OutFile "ntscan.exe"
+Move-Item ntscan.exe C:\Windows\System32\ntscan.exe
+
+# Or use scoop (coming soon)
+# scoop install ntscan
+```
+
+### With Rust (cargo)
+
+```bash
+# Install from crates.io
 cargo install ntscan
 
-# Or grab binary from releases
+# Or install from source
+git clone https://github.com/Aaron-Savron/ntscan
+cd ntscan
+cargo install --path .
+```
+
+### Build from Source
+
+```bash
+git clone https://github.com/Aaron-Savron/ntscan
+cd ntscan
+cargo build --release
+# Binary will be at ./target/release/ntscan
 ```
 
 ## Limitations

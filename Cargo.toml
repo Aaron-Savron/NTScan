@@ -1,7 +1,19 @@
 [package]
 name = "ntscan"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
+authors = ["Aaron Savron <admin@svrnsys.com>"]
+description = "Lightning-fast multi-language security scanner"
+license = "MIT"
+repository = "https://github.com/Aaron-Savron/NTScan"
+homepage = "https://github.com/Aaron-Savron/NTScan"
+keywords = ["security", "scanner", "static-analysis", "vulnerability", "sast"]
+categories = ["command-line-utilities", "development-tools"]
+rust-version = "1.78"
+
+[[bin]]
+name = "ntscan"
+path = "src/main.rs"
 
 [dependencies]
 tree-sitter = "0.25.0"
