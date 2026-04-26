@@ -2918,10 +2918,13 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Download ntscan
+    - name: Install Rust
+      uses: dtolnay/rust-action@stable
+
+    - name: Build ntscan
       run: |
-        curl -L https://github.com/YOUR_USERNAME/ntscan/releases/latest/download/ntscan -o ntscan
-        chmod +x ntscan
+        cargo build --release
+        cp target/release/ntscan ./ntscan
 
     - name: Run ntscan
       run: |
