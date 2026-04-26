@@ -3131,7 +3131,7 @@ jobs:
     // Watch mode: sleep and restart
     if args.watch {
         if !args.quiet {
-            println!("\n👀 Watching for changes... (Ctrl+C to stop)\n");
+            println!("\nWatching for changes... (Ctrl+C to stop)\n");
         }
         std::thread::sleep(std::time::Duration::from_secs(2));
         continue;
@@ -3180,11 +3180,11 @@ impl TuiApp {
     fn new() -> Self {
         Self {
             menu_items: vec![
-                ("🚀", "Quick Scan (current directory)"),
-                ("📁", "Scan specific folder"),
-                ("⚙️", "Configure options"),
-                ("❓", "Help / About"),
-                ("🚪", "Exit"),
+                (">", "Quick Scan (current directory)"),
+                (">", "Scan specific folder"),
+                (">", "Configure options"),
+                (">", "Help / About"),
+                (">", "Exit"),
             ],
             selected: 0,
             path_input: ".".to_string(),
@@ -3284,34 +3284,27 @@ impl TuiApp {
     }
 
     fn draw_menu(&self, stdout: &mut std::io::Stdout, width: usize, _height: usize) -> std::io::Result<()> {
-        let title = "╔══════════════════════════════════════════╗";
-        let subtitle = "║        ntscan - Security Scanner         ║";
-        let bottom = "╚══════════════════════════════════════════╝";
-
-        println!("{}", ansi_term::Colour::Cyan.paint(title));
-        println!("{}", ansi_term::Colour::Cyan.paint(subtitle));
-        println!("{}", ansi_term::Colour::Cyan.paint(bottom));
+        println!("{}", ansi_term::Colour::Cyan.bold().paint("ntscan - Security Scanner"));
         println!();
 
-        for (i, (icon, text)) in self.menu_items.iter().enumerate() {
+        for (i, (_icon, text)) in self.menu_items.iter().enumerate() {
             let prefix = if i == self.selected { "> " } else { "  " };
-            let line = format!("{}{} {}", prefix, icon, text);
+            let line = format!("{}{}", prefix, text);
             if i == self.selected {
-                println!("{}", ansi_term::Style::new().on(ansi_term::Colour::Blue).fg(ansi_term::Colour::White).paint(&line));
+                println!("{}", ansi_term::Colour::White.bold().paint(&line));
             } else {
                 println!("{}", line);
             }
         }
 
         println!();
-        println!("{}", ansi_term::Colour::Fixed(240).paint("Controls: ↑↓ to navigate, Enter to select, q to quit"));
-        println!("{}", ansi_term::Colour::Fixed(240).paint("CLI: ntscan [path] [--flags]"));
+        println!("{}", ansi_term::Colour::Fixed(240).paint("Controls: Up/Down to navigate, Enter to select, q to quit"));
         
         Ok(())
     }
 
     fn draw_path_input(&self, stdout: &mut std::io::Stdout, _width: usize, _height: usize) -> std::io::Result<()> {
-        println!("{}", ansi_term::Colour::Cyan.bold().paint("📁 Scan Specific Folder"));
+        println!("{}", ansi_term::Colour::Cyan.bold().paint("Scan Specific Folder"));
         println!();
         println!("Enter path to scan:");
         println!();
@@ -3322,10 +3315,8 @@ impl TuiApp {
     }
 
     fn draw_scanning(&self, stdout: &mut std::io::Stdout, _width: usize, _height: usize) -> std::io::Result<()> {
-        let spinner = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
-        let frame = spinner[self.scroll_offset % spinner.len()];
         println!("\n\n");
-        println!("{}", ansi_term::Colour::Cyan.bold().paint(format!("{} Scanning...", frame)));
+        println!("{}", ansi_term::Colour::Cyan.bold().paint("Scanning..."));
         println!();
         println!("{}", ansi_term::Colour::Fixed(240).paint("This may take a few seconds depending on codebase size"));
         Ok(())
@@ -3337,7 +3328,7 @@ impl TuiApp {
             let high = findings.iter().filter(|f| f.severity == Severity::High).count();
             let medium = findings.iter().filter(|f| f.severity == Severity::Medium).count();
 
-            println!("{}", ansi_term::Colour::Cyan.bold().paint("📊 Scan Results"));
+            println!("{}", ansi_term::Colour::Cyan.bold().paint("Scan Results"));
             println!();
             println!("  {}: {} files in {:.2}s", 
                 ansi_term::Colour::Green.paint("Scanned"), 
@@ -3347,16 +3338,16 @@ impl TuiApp {
             println!();
             
             if findings.is_empty() {
-                println!("{}", ansi_term::Style::new().on(ansi_term::Colour::Green).fg(ansi_term::Colour::Black).bold().paint(" ✓ No issues found! "));
+                println!("{}", ansi_term::Colour::Green.bold().paint("No issues found!"));
             } else {
                 if critical > 0 {
-                    println!("  {} {} Critical issues", ansi_term::Colour::Red.bold().paint("●"), critical);
+                    println!("  {} Critical issues: {}", ansi_term::Colour::Red.bold().paint("CRIT"), critical);
                 }
                 if high > 0 {
-                    println!("  {} {} High issues", ansi_term::Colour::Yellow.bold().paint("●"), high);
+                    println!("  {} High issues: {}", ansi_term::Colour::Yellow.bold().paint("HIGH"), high);
                 }
                 if medium > 0 {
-                    println!("  {} {} Medium issues", ansi_term::Colour::Blue.bold().paint("●"), medium);
+                    println!("  {} Medium issues: {}", ansi_term::Colour::Blue.bold().paint("MED"), medium);
                 }
                 
                 println!();
@@ -3395,7 +3386,7 @@ impl TuiApp {
     }
 
     fn draw_help(&self, stdout: &mut std::io::Stdout, _width: usize, _height: usize) -> std::io::Result<()> {
-        println!("{}", ansi_term::Colour::Cyan.bold().paint("❓ ntscan Help"));
+        println!("{}", ansi_term::Colour::Cyan.bold().paint("ntscan Help"));
         println!();
         println!("{}", ansi_term::Style::new().bold().paint("About:"));
         println!("  Lightning-fast security scanner for C, C++, Python, JavaScript, and Java.");
@@ -3465,7 +3456,7 @@ impl TuiApp {
 }
 
 fn run_interactive_tui() {
-    println!("{}", ansi_term::Colour::Cyan.bold().paint("🚀 Starting Interactive Mode..."));
+    println!("{}", ansi_term::Colour::Cyan.bold().paint("Starting Interactive Mode..."));
     println!("{}", ansi_term::Colour::Fixed(240).paint("(Use arrow keys and Enter to navigate)"));
     std::thread::sleep(std::time::Duration::from_millis(500));
     
