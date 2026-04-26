@@ -9,8 +9,6 @@ repository = "https://github.com/Aaron-Savron/NTScan"
 homepage = "https://github.com/Aaron-Savron/NTScan"
 keywords = ["security", "scanner", "static-analysis", "vulnerability", "sast"]
 categories = ["command-line-utilities", "development-tools"]
-rust-version = "1.78"
-
 [[bin]]
 name = "ntscan"
 path = "src/main.rs"
