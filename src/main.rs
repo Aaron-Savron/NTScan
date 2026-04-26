@@ -2918,8 +2918,10 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Install Rust
-      uses: dtolnay/rust-action@stable
+    - name: Setup Rust
+      run: |
+        rustup update stable
+        rustup default stable
 
     - name: Build ntscan
       run: |
