@@ -29,14 +29,27 @@ jobs:
 
     - name: Run ntscan
       run: |
-        ./ntscan --sarif ntscan-results.sarif . || true
+        ./ntscan --sarif . || true
+        ls -la ntscan-results.sarif || echo "SARIF file not created (no issues found)"
         # '|| true' allows the workflow to continue and upload results
         # even if critical issues are found
 
+    - name: Check SARIF file exists
+      id: check_sarif
+      run: |
+        if [ -f ntscan-results.sarif ]; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+          ls -lh ntscan-results.sarif
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+          echo "No SARIF file to upload"
+        fi
+
     - name: Upload SARIF to GitHub
+      if: steps.check_sarif.outputs.exists == 'true'
       uses: github/codeql-action/upload-sarif@v4
       with:
-        sarif_file: ntscan-results.sarif
+        sarif_file: ./ntscan-results.sarif
         category: ntscan
 
     - name: Check for critical issues

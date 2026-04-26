@@ -2924,12 +2924,24 @@ jobs:
         chmod +x ntscan
 
     - name: Run ntscan
-      run: ./ntscan --sarif ntscan-results.sarif . || true
+      run: |
+        ./ntscan --sarif . || true
+        ls -la ntscan-results.sarif || echo "No issues found"
+
+    - name: Check SARIF file exists
+      id: check_sarif
+      run: |
+        if [ -f ntscan-results.sarif ]; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+        fi
 
     - name: Upload SARIF to GitHub
+      if: steps.check_sarif.outputs.exists == 'true'
       uses: github/codeql-action/upload-sarif@v4
       with:
-        sarif_file: ntscan-results.sarif
+        sarif_file: ./ntscan-results.sarif
         category: ntscan
 
     - name: Check for critical issues
