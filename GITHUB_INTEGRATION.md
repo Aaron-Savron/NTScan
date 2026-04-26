@@ -44,7 +44,7 @@ jobs:
       run: ./ntscan --sarif results.sarif . || true
     
     - name: Upload to GitHub
-      uses: github/codeql-action/upload-sarif@v3
+      uses: github/codeql-action/upload-sarif@v4
       with:
         sarif_file: results.sarif
 ```

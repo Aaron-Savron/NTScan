@@ -24,6 +24,7 @@ notify = "6.1"              # File watching
 config = "0.14"             # Config file support
 toml = "0.8"                # TOML parsing
 chrono = "0.4"              # Timestamps for SARIF
+crossterm = "0.28"          # Terminal UI
 
 [profile.release]
 opt-level = 3

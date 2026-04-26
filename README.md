@@ -20,7 +20,7 @@ Finds:
 
 ```bash
 # Download
-curl -L https://github.com/you/ntscan/releases/download/v0.2/ntscan -o ntscan
+curl -L https://github.com/Aaron-Savron/ntscan/releases/download/v0.2/ntscan -o ntscan
 chmod +x ntscan
 
 # Run

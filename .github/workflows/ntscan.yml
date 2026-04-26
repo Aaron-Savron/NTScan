@@ -24,7 +24,7 @@ jobs:
 
     - name: Download ntscan
       run: |
-        curl -L https://github.com/yourname/ntscan/releases/latest/download/ntscan-linux-amd64 -o ntscan
+        curl -L https://github.com/Aaron-Savron/ntscan/releases/latest/download/ntscan-linux-amd64 -o ntscan
         chmod +x ntscan
 
     - name: Run ntscan
@@ -34,7 +34,7 @@ jobs:
         # even if critical issues are found
 
     - name: Upload SARIF to GitHub
-      uses: github/codeql-action/upload-sarif@v3
+      uses: github/codeql-action/upload-sarif@v4
       with:
         sarif_file: ntscan-results.sarif
         category: ntscan
