@@ -1,0 +1,23 @@
+# ntscan configuration file
+# Copy to .ntscan.toml in your project root
+
+# File extensions to scan (overrides default)
+extensions = ["c", "cpp", "h", "hpp", "py", "js", "java"]
+
+# Minimum severity to report: low, medium, high, critical
+severity = "medium"
+
+# Number of threads (0 = auto-detect)
+threads = 8
+
+# Output format: text, json
+format = "text"
+
+# Patterns to ignore (regex)
+ignore = [
+    "vendor/.*",
+    "build/.*",
+    "third_party/.*",
+    ".*\.test\.c",
+    ".*_test\.py"
+]

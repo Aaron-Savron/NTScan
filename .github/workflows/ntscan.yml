@@ -1,0 +1,45 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  schedule:
+    # Run daily at 2 AM
+    - cron: '0 2 * * *'
+
+jobs:
+  security-scan:
+    name: ntscan Security Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download ntscan
+      run: |
+        curl -L https://github.com/yourname/ntscan/releases/latest/download/ntscan-linux-amd64 -o ntscan
+        chmod +x ntscan
+
+    - name: Run ntscan
+      run: |
+        ./ntscan --sarif ntscan-results.sarif . || true
+        # '|| true' allows the workflow to continue and upload results
+        # even if critical issues are found
+
+    - name: Upload SARIF to GitHub
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: ntscan-results.sarif
+        category: ntscan
+
+    - name: Check for critical issues
+      run: |
+        ./ntscan --quiet --severity critical . || exit 1
+        # Fail the build if critical issues exist
