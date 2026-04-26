@@ -3145,325 +3145,128 @@ jobs:
 }
 
 // ============================================================================
-// INTERACTIVE TUI MODE - For humans who like menus
+// INTERACTIVE MODE - Simple menu-based interface
 // ============================================================================
 
-use crossterm::{
-    event::{self, Event, KeyCode, KeyEventKind},
-    terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType},
-    cursor::{MoveTo, Show, Hide},
-    ExecutableCommand, QueueableCommand,
-};
-use std::io::{stdout, Write};
-
-struct TuiApp {
-    menu_items: Vec<(&'static str, &'static str)>,
-    selected: usize,
-    path_input: String,
-    severity_filter: usize, // 0=all, 1=critical, 2=high, 3=medium
-    output_format: usize,   // 0=text, 1=json, 2=sarif
-    mode: TuiMode,
-    scan_results: Option<(Vec<Finding>, usize, std::time::Duration)>,
-    scroll_offset: usize,
-}
-
-#[derive(PartialEq)]
-enum TuiMode {
-    Menu,
-    PathInput,
-    Scanning,
-    Results,
-    Help,
-}
-
-impl TuiApp {
-    fn new() -> Self {
-        Self {
-            menu_items: vec![
-                (">", "Quick Scan (current directory)"),
-                (">", "Scan specific folder"),
-                (">", "Configure options"),
-                (">", "Help / About"),
-                (">", "Exit"),
-            ],
-            selected: 0,
-            path_input: ".".to_string(),
-            severity_filter: 0,
-            output_format: 0,
-            mode: TuiMode::Menu,
-            scan_results: None,
-            scroll_offset: 0,
-        }
-    }
-
-    fn run(&mut self) -> std::io::Result<()> {
-        enable_raw_mode()?;
-        let mut stdout = stdout();
-        stdout.execute(Hide)?;
-
-        loop {
-            self.draw()?;
-
-            if let Event::Key(key) = event::read()? {
-                if key.kind == KeyEventKind::Press {
-                    match self.mode {
-                        TuiMode::Menu => match key.code {
-                            KeyCode::Up => {
-                                if self.selected > 0 { self.selected -= 1; }
-                            }
-                            KeyCode::Down => {
-                                if self.selected < self.menu_items.len() - 1 { self.selected += 1; }
-                            }
-                            KeyCode::Enter => {
-                                match self.selected {
-                                    0 => self.run_scan("."),
-                                    1 => self.mode = TuiMode::PathInput,
-                                    2 => self.configure_options(),
-                                    3 => self.mode = TuiMode::Help,
-                                    4 => break,
-                                    _ => {}
-                                }
-                            }
-                            KeyCode::Char('q') => break,
-                            _ => {}
-                        }
-                        TuiMode::PathInput => match key.code {
-                            KeyCode::Enter => {
-                                self.run_scan(&self.path_input.clone());
-                            }
-                            KeyCode::Char(c) => self.path_input.push(c),
-                            KeyCode::Backspace => { self.path_input.pop(); }
-                            KeyCode::Esc => self.mode = TuiMode::Menu,
-                            _ => {}
-                        }
-                        TuiMode::Results => match key.code {
-                            KeyCode::Up => {
-                                if self.scroll_offset > 0 { self.scroll_offset -= 1; }
-                            }
-                            KeyCode::Down => {
-                                self.scroll_offset += 1;
-                            }
-                            KeyCode::Char('r') => self.mode = TuiMode::Menu,
-                            KeyCode::Char('q') => break,
-                            KeyCode::Esc => self.mode = TuiMode::Menu,
-                            KeyCode::Char('s') => self.save_results(),
-                            _ => {}
-                        }
-                        TuiMode::Help => match key.code {
-                            KeyCode::Esc | KeyCode::Char('q') => self.mode = TuiMode::Menu,
-                            _ => {}
-                        }
-                        _ => {}
-                    }
-                }
-            }
-        }
-
-        stdout.execute(Show)?;
-        disable_raw_mode()?;
-        Ok(())
-    }
-
-    fn draw(&self) -> std::io::Result<()> {
-        let mut stdout = stdout();
-        let (width, height) = term_size::dimensions().unwrap_or((80, 24));
-
-        stdout.queue(Clear(ClearType::All))?;
-        stdout.queue(MoveTo(0, 0))?;
-
-        match self.mode {
-            TuiMode::Menu => self.draw_menu(&mut stdout, width, height),
-            TuiMode::PathInput => self.draw_path_input(&mut stdout, width, height),
-            TuiMode::Scanning => self.draw_scanning(&mut stdout, width, height),
-            TuiMode::Results => self.draw_results(&mut stdout, width, height),
-            TuiMode::Help => self.draw_help(&mut stdout, width, height),
-        }?;
-
-        stdout.flush()?;
-        Ok(())
-    }
-
-    fn draw_menu(&self, stdout: &mut std::io::Stdout, width: usize, _height: usize) -> std::io::Result<()> {
-        println!("{}", ansi_term::Colour::Cyan.bold().paint("ntscan - Security Scanner"));
-        println!();
-
-        for (i, (_icon, text)) in self.menu_items.iter().enumerate() {
-            let prefix = if i == self.selected { "> " } else { "  " };
-            let line = format!("{}{}", prefix, text);
-            if i == self.selected {
-                println!("{}", ansi_term::Colour::White.bold().paint(&line));
-            } else {
-                println!("{}", line);
-            }
-        }
-
-        println!();
-        println!("{}", ansi_term::Colour::Fixed(240).paint("Controls: Up/Down to navigate, Enter to select, q to quit"));
-        
-        Ok(())
-    }
-
-    fn draw_path_input(&self, stdout: &mut std::io::Stdout, _width: usize, _height: usize) -> std::io::Result<()> {
-        println!("{}", ansi_term::Colour::Cyan.bold().paint("Scan Specific Folder"));
-        println!();
-        println!("Enter path to scan:");
-        println!();
-        println!("  > {}", self.path_input);
-        println!();
-        println!("{}", ansi_term::Colour::Fixed(240).paint("Press Enter to scan, Esc to cancel"));
-        Ok(())
-    }
-
-    fn draw_scanning(&self, stdout: &mut std::io::Stdout, _width: usize, _height: usize) -> std::io::Result<()> {
-        println!("\n\n");
-        println!("{}", ansi_term::Colour::Cyan.bold().paint("Scanning..."));
-        println!();
-        println!("{}", ansi_term::Colour::Fixed(240).paint("This may take a few seconds depending on codebase size"));
-        Ok(())
-    }
-
-    fn draw_results(&self, stdout: &mut std::io::Stdout, width: usize, height: usize) -> std::io::Result<()> {
-        if let Some((findings, total_files, elapsed)) = &self.scan_results {
-            let critical = findings.iter().filter(|f| f.severity == Severity::Critical).count();
-            let high = findings.iter().filter(|f| f.severity == Severity::High).count();
-            let medium = findings.iter().filter(|f| f.severity == Severity::Medium).count();
-
-            println!("{}", ansi_term::Colour::Cyan.bold().paint("Scan Results"));
-            println!();
-            println!("  {}: {} files in {:.2}s", 
-                ansi_term::Colour::Green.paint("Scanned"), 
-                total_files, 
-                elapsed.as_secs_f64()
-            );
-            println!();
-            
-            if findings.is_empty() {
-                println!("{}", ansi_term::Colour::Green.bold().paint("No issues found!"));
-            } else {
-                if critical > 0 {
-                    println!("  {} Critical issues: {}", ansi_term::Colour::Red.bold().paint("CRIT"), critical);
-                }
-                if high > 0 {
-                    println!("  {} High issues: {}", ansi_term::Colour::Yellow.bold().paint("HIGH"), high);
-                }
-                if medium > 0 {
-                    println!("  {} Medium issues: {}", ansi_term::Colour::Blue.bold().paint("MED"), medium);
-                }
-                
-                println!();
-                println!("{}", ansi_term::Colour::Cyan.bold().paint("Top Findings:"));
-                
-                let max_display = std::cmp::min(10, findings.len());
-                for (i, finding) in findings.iter().skip(self.scroll_offset).take(max_display).enumerate() {
-                    let sev_color = match finding.severity {
-                        Severity::Critical => ansi_term::Colour::Red,
-                        Severity::High => ansi_term::Colour::Yellow,
-                        Severity::Medium => ansi_term::Colour::Blue,
-                        Severity::Low => ansi_term::Colour::Fixed(240),
-                    };
-                    let file_short = if finding.file.len() > width - 30 {
-                        format!("...{}" , &finding.file[finding.file.len()-(width-33)..])
-                    } else {
-                        finding.file.clone()
-                    };
-                    println!("  {} {}:{} - {}", 
-                        sev_color.paint(format!("[{:?}]", finding.severity)),
-                        ansi_term::Colour::Fixed(240).paint(&file_short),
-                        finding.line,
-                        &finding.message[..std::cmp::min(finding.message.len(), width-50)]
-                    );
-                }
-                
-                if findings.len() > 10 {
-                    println!("  ... and {} more (scroll with ↑↓)", findings.len() - 10);
-                }
-            }
-            
-            println!();
-            println!("{}", ansi_term::Colour::Fixed(240).paint("Controls: r = return to menu, s = save, q = quit, ↑↓ = scroll"));
-        }
-        Ok(())
-    }
-
-    fn draw_help(&self, stdout: &mut std::io::Stdout, _width: usize, _height: usize) -> std::io::Result<()> {
-        println!("{}", ansi_term::Colour::Cyan.bold().paint("ntscan Help"));
-        println!();
-        println!("{}", ansi_term::Style::new().bold().paint("About:"));
-        println!("  Lightning-fast security scanner for C, C++, Python, JavaScript, and Java.");
-        println!("  Finds vulnerabilities in ~7 seconds instead of 20 minutes.");
-        println!();
-        println!("{}", ansi_term::Style::new().bold().paint("Quick CLI Usage:"));
-        println!("  ntscan .                    # Scan current directory");
-        println!("  ntscan --quiet .            # Minimal output (CI-friendly)");
-        println!("  ntscan --format json .      # JSON output");
-        println!("  ntscan --sarif results.sarif .  # SARIF for GitHub");
-        println!("  ntscan --tui                # Interactive mode (this menu)");
-        println!();
-        println!("{}", ansi_term::Style::new().bold().paint("Features:"));
-        println!("  • Buffer overflow detection");
-        println!("  • Null pointer analysis");
-        println!("  • Taint tracking for injection bugs");
-        println!("  • Cross-function data flow analysis");
-        println!();
-        println!("{}", ansi_term::Colour::Fixed(240).paint("Press Esc or q to return to menu"));
-        Ok(())
-    }
-
-    fn run_scan(&mut self, path: &str) {
-        self.mode = TuiMode::Scanning;
-        self.draw().ok();
-
-        let args = Args {
-            path: path.into(),
-            extensions: "c,cpp,h,hpp,java,cs,py,js,ts,go,rs,rb".to_string(),
-            format: "text".to_string(),
-            threads: 0,
-            severity: match self.severity_filter {
-                1 => "critical".to_string(),
-                2 => "high".to_string(),
-                3 => "medium".to_string(),
-                _ => "low".to_string(),
-            },
-            quiet: true,
-            watch: false,
-            baseline: None,
-            config: None,
-            sarif: None,
-            git: false,
-            credits: false,
-            coffee: false,
-            save_baseline: None,
-            tui: false,
-        };
-
-        let results = run_scan(&args, true);
-        self.scan_results = Some(results);
-        self.mode = TuiMode::Results;
-        self.scroll_offset = 0;
-    }
-
-    fn configure_options(&mut self) {
-        self.severity_filter = (self.severity_filter + 1) % 4;
-    }
-
-    fn save_results(&self) {
-        if let Some((findings, _, _)) = &self.scan_results {
-            if let Ok(json) = serde_json::to_string_pretty(findings) {
-                let _ = std::fs::write("ntscan-results.json", json);
-            }
-        }
-    }
-}
-
 fn run_interactive_tui() {
-    println!("{}", ansi_term::Colour::Cyan.bold().paint("Starting Interactive Mode..."));
-    println!("{}", ansi_term::Colour::Fixed(240).paint("(Use arrow keys and Enter to navigate)"));
-    std::thread::sleep(std::time::Duration::from_millis(500));
+    use std::io::{stdin, stdout, Write};
     
-    let mut app = TuiApp::new();
-    if let Err(e) = app.run() {
-        eprintln!("TUI error: {}", e);
+    println!("{}", ansi_term::Colour::Cyan.bold().paint("ntscan - Security Scanner"));
+    println!("Interactive Mode\n");
+    
+    loop {
+        println!("Options:");
+        println!("  1. Quick Scan (current directory)");
+        println!("  2. Scan specific folder");
+        println!("  3. Show help");
+        println!("  4. Exit");
+        println!();
+        print!("Select option (1-4): ");
+        stdout().flush().unwrap();
+        
+        let mut input = String::new();
+        stdin().read_line(&mut input).unwrap();
+        let choice = input.trim();
+        
+        match choice {
+            "1" => {
+                println!("\nScanning current directory...\n");
+                run_scan_from_tui(".");
+            }
+            "2" => {
+                print!("Enter path to scan: ");
+                stdout().flush().unwrap();
+                let mut path = String::new();
+                stdin().read_line(&mut path).unwrap();
+                let path = path.trim();
+                if !path.is_empty() {
+                    println!("\nScanning {}...\n", path);
+                    run_scan_from_tui(path);
+                }
+            }
+            "3" => {
+                println!("\n{}", ansi_term::Colour::Cyan.bold().paint("Help:"));
+                println!("  ntscan finds security vulnerabilities in your code.");
+                println!("  Supports: C, C++, Python, JavaScript, TypeScript, Java");
+                println!("\n  CLI Usage:");
+                println!("    ntscan .              # Scan current directory");
+                println!("    ntscan --quiet .      # Minimal output");
+                println!("    ntscan --sarif .      # Output SARIF for GitHub");
+                println!();
+            }
+            "4" | "q" | "quit" => {
+                println!("Goodbye!");
+                break;
+            }
+            _ => println!("Invalid option. Please enter 1-4.\n"),
+        }
     }
+}
+
+fn run_scan_from_tui(path: &str) {
+    let args = Args {
+        path: path.into(),
+        extensions: "c,cpp,h,hpp,java,cs,py,js,ts,go,rs,rb".to_string(),
+        format: "text".to_string(),
+        threads: 0,
+        severity: "low".to_string(),
+        quiet: false,
+        watch: false,
+        baseline: None,
+        config: None,
+        sarif: None,
+        git: false,
+        credits: false,
+        coffee: false,
+        save_baseline: None,
+        tui: false,
+    };
+    
+    let start = std::time::Instant::now();
+    let (findings, total_files, _) = run_scan(&args, false);
+    let elapsed = start.elapsed();
+    
+    let critical = findings.iter().filter(|f| f.severity == Severity::Critical).count();
+    let high = findings.iter().filter(|f| f.severity == Severity::High).count();
+    let medium = findings.iter().filter(|f| f.severity == Severity::Medium).count();
+    
+    println!("Scanned {} files in {:.2}s", total_files, elapsed.as_secs_f64());
+    
+    if findings.is_empty() {
+        println!("{}", ansi_term::Colour::Green.bold().paint("No issues found!"));
+    } else {
+        if critical > 0 {
+            println!("  {} Critical issues: {}", ansi_term::Colour::Red.bold().paint("CRIT"), critical);
+        }
+        if high > 0 {
+            println!("  {} High issues: {}", ansi_term::Colour::Yellow.bold().paint("HIGH"), high);
+        }
+        if medium > 0 {
+            println!("  {} Medium issues: {}", ansi_term::Colour::Blue.bold().paint("MED"), medium);
+        }
+        
+        println!("\nTop Findings:");
+        for finding in findings.iter().take(10) {
+            let sev_label = match finding.severity {
+                Severity::Critical => ansi_term::Colour::Red.bold().paint("CRIT"),
+                Severity::High => ansi_term::Colour::Yellow.bold().paint("HIGH"),
+                Severity::Medium => ansi_term::Colour::Blue.bold().paint("MED "),
+                Severity::Low => ansi_term::Colour::Fixed(240).paint("LOW "),
+            };
+            println!("  [{}] {}:{} - {}", 
+                sev_label,
+                finding.file,
+                finding.line,
+                finding.message
+            );
+        }
+        
+        if findings.len() > 10 {
+            println!("  ... and {} more", findings.len() - 10);
+        }
+    }
+    
+    println!();
 }
 
 // ============================================================================
